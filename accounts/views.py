@@ -37,7 +37,7 @@ class UserSignUpView(APIView):
                 username = email.split('@')[0]
                 try:
                     send_otp_email(email, username, otp)
-                    return Response({"message": "OTP sent successfully."}, status=status.HTTP_200_OK)
+                    return Response({"message": "OTP sent successfully for user registration."}, status=status.HTTP_200_OK)
                 except Exception as e:
                     cache.delete(f"otp_{email}")
                     return Response(
@@ -49,10 +49,10 @@ class UserSignUpView(APIView):
             print('error:',e)
             return Response({"error": "An unexpected error occurred."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-class UserOTPVerifyView(APIView):
+class SignupOTPVerifyView(APIView):
 
     def post(self, request):
-        serializer = OTPSerializer(data=request.data)
+        serializer = SignupOTPSerializer(data=request.data)
         try:
             if serializer.is_valid():
 
@@ -83,6 +83,72 @@ class UserOTPVerifyView(APIView):
                 return response
             
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        except Exception as e:
+            print('error:', e)
+            return Response(
+                {"error": "An unexpected error occurred."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+     
+    
+class SignInUserView(APIView):
+
+    def post(self, request):
+        serializer = SignInSerializer(data=request.data)
+        
+        try:
+            if not serializer.is_valid():
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)  
+            
+            email = serializer.validated_data['email']
+            otp = generate_otp()
+
+            # Store OTP in Redis cache with a 2-minute timeout
+            cache.set(f"otp_{email}", otp, timeout=120)
+            print('generated_otp:',otp)
+
+
+            username = email.split('@')[0]
+            try:
+                send_otp_email(email, username, otp)
+                return Response({"message": "OTP sent successfully for login."}, status=status.HTTP_200_OK)
+            except Exception as e:
+                cache.delete(f"otp_{email}")
+                return Response(
+                    {"error": str(e)},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                  
+        except Exception as e:
+            print('error:', e)
+            return Response(
+                {"error": "An unexpected error occurred."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+class LoginOTPVerifyView(APIView):
+
+    def post(self, request):
+        serializer = LoginOTPSerializer(data=request.data)
+        try:
+            if serializer.is_valid():
+
+                email = serializer.validated_data['email']
+                cache.delete(f"otp_{email}")
+                user = CustomUser.objects.get(email=email)
+                tokens = get_tokens_for_user(user)    
+                user_serializer = UserSerializer(user)
+
+                response = Response({
+                    "message": "Successfully loged in.",
+                    "user": user_serializer.data,
+                    "access":tokens['access'],
+                    "refresh":tokens['refresh'],
+                }, status=status.HTTP_200_OK)
+
+                return response
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
         except Exception as e:
             print('error:', e)
