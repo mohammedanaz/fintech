@@ -95,6 +95,7 @@ class SignupOTPVerifyView(APIView):
 class SignInUserView(APIView):
 
     def post(self, request):
+        print('inside sign in view')
         serializer = SignInSerializer(data=request.data)
         
         try:
