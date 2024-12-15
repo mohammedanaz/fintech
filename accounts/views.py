@@ -31,7 +31,7 @@ class UserSignUpView(APIView):
 
                 # Store OTP in Redis cache with a 2-minute timeout
                 cache.set(f"otp_{email}", otp, timeout=120)
-                print('generated_otp:',otp)
+                print(f'generated_otp: {otp} sent to {email}')
 
 
                 username = email.split('@')[0]
@@ -74,7 +74,7 @@ class SignupOTPVerifyView(APIView):
                 user_serializer = UserSerializer(user)
 
                 response = Response({
-                    "message": "User created successfully.",
+                    "message": "User registered successfully.",
                     "user": user_serializer.data,
                     "access":tokens['access'],
                     "refresh":tokens['refresh'],

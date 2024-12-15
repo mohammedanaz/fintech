@@ -44,6 +44,7 @@ INSTALLED_APPS = [
 
     #my apps
     'accounts',
+    'finance',
 
     #third party apps
     'rest_framework',
